@@ -15,7 +15,7 @@ from sequence_jacobian import grids                       # modules
 from sticky_exp import *
 
 saveobj=True
-loadss=True
+loadss=False
 
 ## blocks
 
