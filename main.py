@@ -76,12 +76,18 @@ def taylor(rstar, pi, phi):
     i = rstar + phi * pi
     return i
 
-# fiscal (balanced budget)
+# fiscal
 
 @simple
-def fiscal(r, w, N, G, Bg):
-    tax = (r * Bg + G) / w / N
+def fiscalSS(w,N,Bg,r,G):
+    tax=(r*Bg+G) /(w*N)    
     return tax
+
+@solved(unknowns={'Bg': 4.,'tax': 0.3 }, targets=['Bg_res','tax_res'], solver="broyden_custom")
+def fiscal(tax,Bg,r, w, N, G,gammatax,rhotax,taxss,Bgss):
+    Bg_res=Bg(-1)*(1+r)+G-tax*w*N-Bg
+    tax_res = taxss*(tax(-1)/taxss)**rhotax*(Bg(-1)/Bgss)**(gammatax*(1-rhotax))-tax
+    return Bg_res,tax_res
 
 
 # real interest rate and return on assets 
@@ -190,7 +196,7 @@ def union_ss(tax, w, UCE, N, muw, frisch):
     wnkpc = vphi * N ** (1 + 1 / frisch) - (1 - tax) * w * UCE / muw
     return vphi, wnkpc
 
-blocks_ss = [hh_ext, partial_ss, union_ss, dividend, taylor, fiscal, share_value, finance, mkt_clearing,rareturn]
+blocks_ss = [hh_ext, partial_ss, union_ss, dividend, taylor, fiscalSS, share_value, finance, mkt_clearing,rareturn]
 
 hank_ss = create_model(blocks_ss, name='Two-Asset HANK SS')
 
@@ -205,8 +211,9 @@ else:
     calibration = {'Y': 1., 'N': 1.0, 'K': 10., 'r': 0.0125, 'rstar': 0.0125, 'tot_wealth': 14,
                'delta': 0.02, 'pi': 0., 'kappap': 0.1, 'muw': 1.1, 'Bh': 1.04, 'Bg': 2.8,
                'G': 0.2, 'eis': 0.5, 'frisch': 1, 'chi0': 0.25, 'chi2':2 , 'epsI': 4,
-               'omega': 0.005, 'kappaw': 0.1, 'phi': 1.5, 'nZ': 5, 'nB': 50, 'nA': 70, 'nK': 50,
-               'bmax': 40, 'amax': 3000, 'kmax': 1, 'rho_z': 0.966, 'sigma_z': 0.92}
+               'omega': 0.005, 'kappaw': 0.1, 'phi': 1.5, 'nZ': 3, 'nB': 50, 'nA': 70, 'nK': 50,
+               'bmax': 40, 'amax': 3000, 'kmax': 1, 'rho_z': 0.966, 'sigma_z': 0.92,
+               'rhotax':0,'gammatax':0.5}
 
     unknowns_ss = {'beta': 0.976, 'chi1': 10.5,'ra':0.0125}
     targets_ss = {'asset_mkt': 0., 'B': 'Bh','checkra':0}
@@ -222,8 +229,15 @@ blocks = [hh_ext, production_solved, pricing_solved, arbitrage_solved,
 
 hank = create_model(blocks, name='Two-Asset HANK')
 
-#ss =  hank.steady_state(cali)
-ss=cali
+
+
+# add some more variables/params from steadystate
+
+cali['Bgss']=cali['Bg']
+cali['taxss']=cali['tax']
+
+
+ss =  hank.steady_state(cali)
 
 # impulse responses
 
